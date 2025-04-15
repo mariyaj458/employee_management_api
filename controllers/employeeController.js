@@ -1,26 +1,18 @@
-const express = require("express");
-const router = express.Router();
-const { verifyUser } = require("../authenticate");
 const Employee = require("../models/employee");
+const { notFoundError, badRequestError } = require("../utils/commonErrors");
 
-router.post("/AddAddresses", verifyUser, async (req, res) => {
+exports.addAddress = async (req, res, next) => {
   try {
     const userId = req.user._id;
     const addresses = req.body.addresses;
 
     if (!Array.isArray(addresses)) {
-      return res.status(400).json({
-        success: false,
-        message: "Addresses must be an array",
-      });
+      return next(badRequestError("Addresses must be an array"));
     }
 
     const employee = await Employee.findOne({ userId });
     if (!employee) {
-      return res.status(404).json({
-        success: false,
-        message: "Employee not found",
-      });
+      return next(notFoundError("Employee"));
     }
 
     employee.addresses.push(...addresses);
@@ -32,11 +24,11 @@ router.post("/AddAddresses", verifyUser, async (req, res) => {
       employee,
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    next(createError(err.message));
   }
-});
+};
 
-router.put("/UpdateAddress/:addressId", verifyUser, async (req, res) => {
+exports.updateAddress = async (req, res, next) => {
   try {
     const userId = req.user._id;
     const { addressId } = req.params;
@@ -44,18 +36,12 @@ router.put("/UpdateAddress/:addressId", verifyUser, async (req, res) => {
 
     const employee = await Employee.findOne({ userId });
     if (!employee) {
-      return res.status(404).json({
-        success: false,
-        message: "Employee not found",
-      });
+      return next(notFoundError("Employee"));
     }
 
     const address = employee.addresses.id(addressId);
     if (!address) {
-      return res.status(404).json({
-        success: false,
-        message: "Address not found",
-      });
+      return next(notFoundError("Address"));
     }
 
     Object.assign(address, updatedAddress);
@@ -69,29 +55,23 @@ router.put("/UpdateAddress/:addressId", verifyUser, async (req, res) => {
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
-});
+};
 
-router.delete("/DeleteAddress/:addressId", verifyUser, async (req, res) => {
+exports.deleteAddress = async (req, res, next) => {
   try {
     const userId = req.user._id;
     const { addressId } = req.params;
 
     const employee = await Employee.findOne({ userId });
     if (!employee) {
-      return res.status(404).json({
-        success: false,
-        message: "Employee not found",
-      });
+      return next(notFoundError("Employee"));
     }
     const addressIndex = employee.addresses.findIndex(
       (addr) => addr._id.toString() === addressId
     );
 
     if (addressIndex === -1) {
-      return res.status(404).json({
-        success: false,
-        message: "Address not found",
-      });
+      return next(notFoundError("Address"));
     }
     employee.addresses.splice(addressIndex, 1);
     await employee.save();
@@ -102,28 +82,23 @@ router.delete("/DeleteAddress/:addressId", verifyUser, async (req, res) => {
       employee,
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    next(createError(err.message));
   }
-});
+};
 
-router.get("/Profile", verifyUser, async (req, res) => {
+exports.profileDetails = async (req, res) => {
   try {
     const employee = await Employee.findOne({ userId: req.user.id });
 
     if (!employee) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Employee not found" });
+      return next(notFoundError("Employee"));
     }
-
     res.status(200).json({
       success: true,
       message: "Employee profile fetched successfully",
       employee,
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    next(createError(err.message));
   }
-});
-
-module.exports = router;
+};
