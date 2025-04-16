@@ -1,10 +1,14 @@
 const express = require("express");
 const router = express.Router();
+const multer = require("multer");
+
 const {
   uploadProfilePic,
   deleteProfilePic,
   uploadResume,
   deleteResume,
+  getProfilePic,
+  downloadResume,
 } = require("../controllers/uploadController");
 const { verifyUser } = require("../authenticate");
 const upload = require("../utils/uploadService");
@@ -28,11 +32,13 @@ router.post(
   (req, res, next) => {
     upload.single("profilePic")(req, res, function (err) {
       if (err) return handleMulterError(err, req, res, next);
-      next(createError(err.message));
+      next();
     });
   },
   uploadProfilePic
 );
+
+router.get("/getProfilePic", verifyUser, getProfilePic);
 
 router.delete("/deleteProfilePic", verifyUser, deleteProfilePic);
 
@@ -42,11 +48,13 @@ router.post(
   (req, res, next) => {
     upload.single("resume")(req, res, function (err) {
       if (err) return handleMulterError(err, req, res, next);
-      next(createError(err.message));
+      next();
     });
   },
   uploadResume
 );
+
+router.get("/DownloadResume", verifyUser, downloadResume);
 
 router.delete("/DeleteResume", verifyUser, deleteResume);
 

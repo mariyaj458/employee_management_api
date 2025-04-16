@@ -1,5 +1,7 @@
 const fs = require("fs");
 const Employee = require("../models/employee");
+const { badRequestError, createError } = require("../utils/commonErrors");
+const path = require("path");
 
 exports.uploadProfilePic = async (req, res) => {
   try {
@@ -30,6 +32,27 @@ exports.uploadProfilePic = async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+exports.getProfilePic = async (req, res, next) => {
+  try {
+    if (!req.user || !req.user.id) {
+      return next(badRequestError("User not authenticated"));
+    }
+    const employee = await Employee.findOne({ userId: req.user.id });
+    if (!employee || !employee.profilePic) {
+      return next(badRequestError("Profile picture not found"));
+    }
+    const filePath = path.resolve(employee.profilePic);
+    if (!fs.existsSync(filePath)) {
+      return next(badRequestError("Profile picture not found"));
+    }
+
+    res.sendFile(filePath);
+  } catch (err) {
+    console.error("Error in getProfilePic:", err);
+    next(createError("Failed to retrieve profile picture"));
   }
 };
 
@@ -88,6 +111,30 @@ exports.uploadResume = async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+exports.downloadResume = async (req, res, next) => {
+  try {
+    const employee = await Employee.findOne({ userId: req.user.id });
+
+    if (!employee || !employee.resume) {
+      return next(badRequestError("Resume not found"));
+    }
+    const filePath = path.resolve(employee.resume);
+
+    if (!fs.existsSync(filePath)) {
+      return next(badRequestError("Resume file does not exist on the server"));
+    }
+    res.download(filePath, (err) => {
+      if (err) {
+        console.error("Download error:", err);
+        return next(createError("Failed to download resume"));
+      }
+    });
+  } catch (err) {
+    console.error("Error in downloadResume:", err);
+    next(createError("Server error while downloading resume"));
   }
 };
 

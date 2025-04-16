@@ -2,6 +2,7 @@ const passport = require("passport");
 const User = require("../models/user");
 const authenticate = require("../authenticate");
 const { createError } = require("../utils/commonErrors");
+const { blacklistToken } = require("../authenticate");
 
 exports.signup = async (req, res, next) => {
   try {
@@ -36,6 +37,10 @@ exports.login = (req, res) => {
 };
 
 exports.logout = (req, res) => {
+  const token = req.headers.authorization?.split(" ")[1];
+  if (token) {
+    blacklistToken(token);
+  }
   res.status(200).json({
     success: true,
     message: "Logged out successfully",

@@ -32,8 +32,33 @@ passport.use(
   })
 );
 
+const blacklistedTokens = new Set();
+
+exports.blacklistToken = (token) => {
+  blacklistedTokens.add(token);
+};
+
+exports.isTokenBlacklisted = (token) => {
+  return blacklistedTokens.has(token);
+};
+
 exports.getToken = function (user) {
   return jwt.sign(user, process.env.JWT_SECRET, { expiresIn: "1h" });
 };
 
-exports.verifyUser = passport.authenticate("jwt", { session: false });
+exports.verifyUser = (req, res, next) => {
+  passport.authenticate("jwt", { session: false }, (err, user, info) => {
+    const token = req.headers.authorization?.split(" ")[1];
+
+    if (exports.isTokenBlacklisted(token)) {
+      return res
+        .status(401)
+        .json({ success: false, message: "Token has been invalidated." });
+    }
+    if (err || !user) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+    req.user = user;
+    next();
+  })(req, res, next);
+};
